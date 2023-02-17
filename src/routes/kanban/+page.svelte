@@ -34,14 +34,14 @@
 		
 	*/
 
-	function dragOver(ev: DragEvent, laneIndex: number, cardIndex: number) {
+	/* function dragOver(ev: DragEvent, laneIndex: number, cardIndex: number) {
 		ev.preventDefault();
 		console.log(`${laneIndex}-${cardIndex}`)
-		/* if (laneIndex !== cardDragged.laneIndex || cardIndex !== cardDragged.cardIndex) {
+		if (laneIndex !== cardDragged.laneIndex || cardIndex !== cardDragged.cardIndex) {
 			const el: Element = document.getElementById(`card-${laneIndex}-${cardIndex}`)
 			el.style.transform = `translateY(${draggedRect.height}px)`;
-		} */
-		/* if (laneIndex !== cardDragged.laneIndex) {
+		}
+		if (laneIndex !== cardDragged.laneIndex) {
 			console.log('Different line');
 		} else {
 			console.log('Same line');
@@ -50,14 +50,9 @@
 			console.log('Different card');
 		} else {
 			console.log('Same card');
-		} */
-	}
+		}
+	} */
 
-	function dragEnter(laneIndex: number, cardIndex: number) {
-		//if (laneHover === laneIndex) {
-			cardHover = cardIndex;
-		//}
-	}
 
 	function dragStart(event: DragEvent, laneIndex: number, cardIndex: number) {
 		const draggedElement = document.getElementById(`card-${laneIndex}-${cardIndex}`);
@@ -69,15 +64,16 @@
 	}
 
 	function drop(event: DragEvent, laneIndex: number) {
-		event.preventDefault();
+		console.log("ciao")
 		/* const laneDropIndex = laneIndex
 		const cardDropIndex = cardIndex */
 		const json = event.dataTransfer?.getData('text/plain');
 		if (json) {
 			const data = JSON.parse(json);
 			const [item] = Board[data.laneIndex].items.splice(data.cardIndex, 1);
-			Board[laneIndex].items.push(item);
+			Board[laneIndex].items.splice(cardHover, 0, item);
 		}
+		console.log(Board)
 		Board = Board;
 		laneHover = null;
 		cardHover = null;
@@ -120,32 +116,23 @@
 				<!-- COLUMN CONTAINER -->
 				<div
 					class="flex flex-col grow pb-2 overflow-auto"
-					on:dragenter={() => (laneHover = laneIndex)}
-					
+					on:dragenter|preventDefault={() => (laneHover = laneIndex)}
 					on:drop={(event) => drop(event, laneIndex)}
-					on:dragover={() => false}
-				>  <!-- on:dragleave={() => (laneHover = null)} -->
+					on:dragover|preventDefault={() => false}
+				> 
 					<!-- CARD -->
 					{#each lane.items as card, cardIndex (card)}
-						<!-- in:receive={{ key: cardIndex }}
-					out:send={{ key: cardIndex }} -->
 						<div 
 						id={`card-${laneIndex}-${cardIndex}`} 
 						class="card"
 						style={(laneIndex === laneHover && cardIndex >= cardHover)? `transform: translateY(${draggedHeight}px)` : `transform: translateY(0px)`}
-						
 						animate:flip={{ duration: 500 }}>
-						{laneIndex}
-						{laneHover}
-						{cardIndex}
-						{cardHover}
-							<!-- class:is-active={cardHover === cardIndex && laneHover === lane.name} on:dragenter={() => {dragEnter(lane.name, cardIndex)}} ondragover="return false"-->
 							<div
 								class="relative flex flex-col items-start p-4 mt-3 bg-white rounded-lg cursor-pointer bg-opacity-90 group hover:bg-opacity-100"
 								draggable={true}
 								on:dragstart={(event) => dragStart(event, laneIndex, cardIndex)}
-								on:dragover={(ev) => dragOver(ev, laneIndex, cardIndex)}
-								on:dragenter={() => {dragEnter(laneIndex, cardIndex)}}
+								on:dragover|preventDefault={() => false}
+								on:dragenter|preventDefault={() => {cardHover = cardIndex}}
 							>
 								<button
 									class="absolute top-0 right-0 flex items-center justify-center hidden w-5 h-5 mt-3 mr-2 text-gray-500 rounded hover:bg-gray-200 hover:text-gray-700 group-hover:flex"
