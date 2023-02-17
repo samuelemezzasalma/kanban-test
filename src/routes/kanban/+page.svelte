@@ -20,11 +20,13 @@
 		}
 	];
 
-	let cardHover: number | null;
-
+	
 	let draggedRect: DOMRect;
-
-	let laneHover: string | null;
+	
+	$: draggedHeight = draggedRect?.height?? 0
+	
+	let cardHover: number | null;
+	let laneHover: number | null;
 
 	let cardDragged: { laneIndex: number; cardIndex: number };
 
@@ -34,7 +36,12 @@
 
 	function dragOver(ev: DragEvent, laneIndex: number, cardIndex: number) {
 		ev.preventDefault();
-		if (laneIndex !== cardDragged.laneIndex) {
+		console.log(`${laneIndex}-${cardIndex}`)
+		/* if (laneIndex !== cardDragged.laneIndex || cardIndex !== cardDragged.cardIndex) {
+			const el: Element = document.getElementById(`card-${laneIndex}-${cardIndex}`)
+			el.style.transform = `translateY(${draggedRect.height}px)`;
+		} */
+		/* if (laneIndex !== cardDragged.laneIndex) {
 			console.log('Different line');
 		} else {
 			console.log('Same line');
@@ -43,17 +50,17 @@
 			console.log('Different card');
 		} else {
 			console.log('Same card');
-		}
+		} */
 	}
 
-	function dragEnter(laneName: string, cardIndex: number) {
-		if (laneHover === laneName) {
+	function dragEnter(laneIndex: number, cardIndex: number) {
+		//if (laneHover === laneIndex) {
 			cardHover = cardIndex;
-		}
+		//}
 	}
 
 	function dragStart(event: DragEvent, laneIndex: number, cardIndex: number) {
-		const draggedElement = document.getElementById(`card-${cardIndex}`);
+		const draggedElement = document.getElementById(`card-${laneIndex}-${cardIndex}`);
 		if (draggedElement) {
 			draggedRect = draggedElement?.getBoundingClientRect();
 		}
@@ -63,6 +70,8 @@
 
 	function drop(event: DragEvent, laneIndex: number) {
 		event.preventDefault();
+		/* const laneDropIndex = laneIndex
+		const cardDropIndex = cardIndex */
 		const json = event.dataTransfer?.getData('text/plain');
 		if (json) {
 			const data = JSON.parse(json);
@@ -87,7 +96,7 @@
 		<!-- COLUMN -->
 		{#each Board as lane, laneIndex (lane)}
 			<!-- in:receive={{ key: laneIndex }} out:send={{ key: laneIndex }} -->
-			<div id={`lane-${laneIndex}`} class="flex flex-col flex-shrink-0 w-72" animate:flip>
+			<div id={`lane-${laneIndex}`} class="flex flex-col shrink-0 w-72" animate:flip>
 				<!-- COLUMN TITLE -->
 				<div class="flex items-center flex-shrink-0 h-10 px-2">
 					<span class="block text-sm font-semibold">{lane.name}</span>
@@ -110,23 +119,33 @@
 				</div>
 				<!-- COLUMN CONTAINER -->
 				<div
-					class="flex flex-col pb-2 overflow-auto"
-					on:dragenter={() => (laneHover = lane.name)}
-					on:dragleave={() => (laneHover = null)}
+					class="flex flex-col grow pb-2 overflow-auto"
+					on:dragenter={() => (laneHover = laneIndex)}
+					
 					on:drop={(event) => drop(event, laneIndex)}
 					on:dragover={() => false}
-				>
+				>  <!-- on:dragleave={() => (laneHover = null)} -->
 					<!-- CARD -->
 					{#each lane.items as card, cardIndex (card)}
 						<!-- in:receive={{ key: cardIndex }}
 					out:send={{ key: cardIndex }} -->
-						<div id={`card-${cardIndex}`} class="card" animate:flip={{ duration: 500 }}>
+						<div 
+						id={`card-${laneIndex}-${cardIndex}`} 
+						class="card"
+						style={(laneIndex === laneHover && cardIndex >= cardHover)? `transform: translateY(${draggedHeight}px)` : `transform: translateY(0px)`}
+						
+						animate:flip={{ duration: 500 }}>
+						{laneIndex}
+						{laneHover}
+						{cardIndex}
+						{cardHover}
 							<!-- class:is-active={cardHover === cardIndex && laneHover === lane.name} on:dragenter={() => {dragEnter(lane.name, cardIndex)}} ondragover="return false"-->
 							<div
 								class="relative flex flex-col items-start p-4 mt-3 bg-white rounded-lg cursor-pointer bg-opacity-90 group hover:bg-opacity-100"
 								draggable={true}
 								on:dragstart={(event) => dragStart(event, laneIndex, cardIndex)}
 								on:dragover={(ev) => dragOver(ev, laneIndex, cardIndex)}
+								on:dragenter={() => {dragEnter(laneIndex, cardIndex)}}
 							>
 								<button
 									class="absolute top-0 right-0 flex items-center justify-center hidden w-5 h-5 mt-3 mr-2 text-gray-500 rounded hover:bg-gray-200 hover:text-gray-700 group-hover:flex"
