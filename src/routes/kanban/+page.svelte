@@ -22,7 +22,7 @@ import { loop_guard } from 'svelte/internal';
 	];
 
 	
-	let draggedRect: DOMRect;
+	let draggedRect: DOMRect | undefined;
 	
 	$: draggedHeight = draggedRect?.height?? 0
 	
@@ -55,26 +55,26 @@ import { loop_guard } from 'svelte/internal';
 		const draggedElement = document.getElementById(`card-${laneIndex}-${cardIndex}`);
 		if (draggedElement) {
 			draggedRect = draggedElement?.getBoundingClientRect();
+			cardDragged = { laneIndex, cardIndex };
+			event.dataTransfer?.setData('text/plain', JSON.stringify(cardDragged));
 		}
-		cardDragged = { laneIndex, cardIndex };
-		event.dataTransfer?.setData('text/plain', JSON.stringify(cardDragged));
 	}
 
 	function drop(event: DragEvent, laneIndex: number) {
-		console.log("ciao")
 		/* const laneDropIndex = laneIndex
 		const cardDropIndex = cardIndex */
 		const json = event.dataTransfer?.getData('text/plain');
 		if (json) {
 			const data = JSON.parse(json);
 			const [item] = Board[data.laneIndex].items.splice(data.cardIndex, 1);
-			if (cardHover) {
+			console.log(cardHover)
+			if (typeof cardHover === "number") {
 				Board[laneIndex].items.splice(cardHover, 0, item);
 			} else {
 				Board[laneIndex].items.push(item);
 			}
 		}
-		console.log(Board)
+		
 		Board = Board;
 		laneHover = null;
 		cardHover = null;
@@ -116,32 +116,36 @@ import { loop_guard } from 'svelte/internal';
 				</div>
 				<!-- COLUMN CONTAINER -->
 				<div
+					
 					class="flex flex-col grow pb-2 overflow-auto"
 					on:drop={(event) => drop(event, laneIndex)}
 					on:dragover|preventDefault={() => false}
 					on:dragenter|preventDefault={() => (laneHover = laneIndex)}
-				>
+					on:dragend={() => {laneHover = null}}
+				> <!-- overflow-auto -->
 					<!-- CARD -->
 					{#each lane.items as card, cardIndex (card)}
 						<div 
 						id={`card-${laneIndex}-${cardIndex}`} 
 						class="card"
 						style={(cardHover !== null && (laneIndex === laneHover && cardIndex >= cardHover))? `transform: translateY(${draggedHeight}px)` : `transform: translateY(0px)`}
+						in:receive={{ key: cardIndex }}
+						out:send={{ key: cardIndex }}
 						animate:flip={{ duration: 500 }}>
 						{laneIndex}
 						{laneHover}
 						{cardIndex}
 						{cardHover}
 							<div
-								class="relative flex flex-col items-start p-4 bg-white rounded-lg cursor-pointer bg-opacity-90 group hover:bg-opacity-100"
+								class="relative flex flex-col items-start p-4 mt-3 bg-white rounded-lg cursor-pointer bg-opacity-90 group hover:bg-opacity-100"
 								draggable={true}
 								on:dragstart={(event) => dragStart(event, laneIndex, cardIndex)}
 								on:dragover|preventDefault={() => false}
-								
+								on:dragend={() => {cardHover = null}}
 							>
 							<!-- on:dragenter|preventDefault={() => {cardHover = cardIndex; console.log("enter")}}
 								on:dragleave={() => {cardHover = null; console.log("leave")}} -->
-								<div class="flex w-full" on:dragenter|preventDefault={() => {cardHover = cardIndex; console.log("enter")}}>
+								<div class="flex w-full" on:dragenter|preventDefault={() => {cardHover = cardIndex;}}>
 									<button
 									class="absolute top-0 right-0 flex items-center justify-center hidden w-5 h-5 mt-3 mr-2 text-gray-500 rounded hover:bg-gray-200 hover:text-gray-700 group-hover:flex"
 									>
@@ -163,7 +167,7 @@ import { loop_guard } from 'svelte/internal';
 								</div>
 								
 								<h4 class="mt-3 text-sm font-medium">{card}</h4>
-								<div on:dragleave={() => {cardHover = null; console.log("leave")}} class="flex items-center w-full mt-3 text-xs font-medium text-gray-400">
+								<div on:dragleave={() => {cardHover = null;}} class="flex items-center w-full mt-3 text-xs font-medium text-gray-400">
 									<div class="flex items-center">
 										<svg
 											class="w-4 h-4 text-gray-300 fill-current"
