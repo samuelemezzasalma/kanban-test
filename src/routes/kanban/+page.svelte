@@ -25,10 +25,15 @@
 	
 	$: draggedHeight = draggedRect?.height?? 0
 	
-	let cardHover: number | null;
-	let laneHover: number | null;
+	let cardHover: number | null = null;
+	let laneHover: number | null = null;
 
 	let cardDragged: { laneIndex: number; cardIndex: number };
+	
+	
+	
+
+	
 
 	/* 
 		
@@ -125,7 +130,7 @@
 						<div 
 						id={`card-${laneIndex}-${cardIndex}`} 
 						class="card"
-						style={(laneIndex === laneHover && cardIndex >= cardHover)? `transform: translateY(${draggedHeight}px)` : `transform: translateY(0px)`}
+						style={(cardHover !== null && (laneIndex === laneHover && cardIndex >= cardHover))? `transform: translateY(${draggedHeight}px)` : `transform: translateY(0px)`}
 						animate:flip={{ duration: 500 }}>
 							<div
 								class="relative flex flex-col items-start p-4 mt-3 bg-white rounded-lg cursor-pointer bg-opacity-90 group hover:bg-opacity-100"
