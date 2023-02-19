@@ -20,15 +20,17 @@ import { loop_guard } from 'svelte/internal';
 			items: ['Vercel']
 		}
 	];
-
 	
-	let draggedRect: DOMRect | undefined;
+	let draggedCardRect: DOMRect | undefined;
 	
-	$: draggedHeight = draggedRect?.height?? 0
+	$: draggedCardHeight = draggedCardRect?.height?? 0
 	
 	let cardHover: number | null = null;
 	let laneHover: number | null = null;
 
+	let laneHoverDrag: number | null = null;
+
+	let laneDragged: number;
 	let cardDragged: { laneIndex: number; cardIndex: number };
 
 	/* function dragOver(ev: DragEvent, laneIndex: number, cardIndex: number) {
@@ -36,7 +38,7 @@ import { loop_guard } from 'svelte/internal';
 		console.log(`${laneIndex}-${cardIndex}`)
 		if (laneIndex !== cardDragged.laneIndex || cardIndex !== cardDragged.cardIndex) {
 			const el: Element = document.getElementById(`card-${laneIndex}-${cardIndex}`)
-			el.style.transform = `translateY(${draggedRect.height}px)`;
+			el.style.transform = `translateY(${draggedCardRect.height}px)`;
 		}
 		if (laneIndex !== cardDragged.laneIndex) {
 			console.log('Different line');
@@ -50,11 +52,30 @@ import { loop_guard } from 'svelte/internal';
 		}
 	} */
 
+	function dragLaneStart(event: DragEvent, laneIndex: number) {
+		console.log("dragLaneStart")
+		laneDragged = laneIndex
+		event.dataTransfer?.setData('text/plain', JSON.stringify(laneDragged));
+	}
+	function dropLane(event: DragEvent) {
+		const json = event.dataTransfer?.getData('text/plain');
+		if (json) {
+			const data = JSON.parse(json);
+			const [item] = Board.splice(data.laneDragged, 1);
+			if (typeof laneHoverDrag === "number") {
+				Board.splice(laneHoverDrag, 0, item);
+			} else {
+				Board.push(item);
+			}
+		}
+		laneHoverDrag = null
+	}
+
 
 	function dragStart(event: DragEvent, laneIndex: number, cardIndex: number) {
 		const draggedElement = document.getElementById(`card-${laneIndex}-${cardIndex}`);
 		if (draggedElement) {
-			draggedRect = draggedElement?.getBoundingClientRect();
+			draggedCardRect = draggedElement?.getBoundingClientRect();
 			cardDragged = { laneIndex, cardIndex };
 			event.dataTransfer?.setData('text/plain', JSON.stringify(cardDragged));
 		}
@@ -63,6 +84,7 @@ import { loop_guard } from 'svelte/internal';
 	function drop(event: DragEvent, laneIndex: number) {
 		/* const laneDropIndex = laneIndex
 		const cardDropIndex = cardIndex */
+		event.preventDefault();
 		const json = event.dataTransfer?.getData('text/plain');
 		if (json) {
 			const data = JSON.parse(json);
@@ -89,11 +111,24 @@ import { loop_guard } from 'svelte/internal';
 		<h1 class="text-2xl font-bold">Team Project Board</h1>
 	</div>
 	<!-- BOARD -->
-	<div class="flex flex-grow px-10 mt-4 space-x-6 overflow-auto">
+	<div
+	class="flex flex-grow px-10 mt-4 space-x-6 overflow-auto">
 		<!-- COLUMN -->
 		{#each Board as lane, laneIndex (lane)}
 			<!-- in:receive={{ key: laneIndex }} out:send={{ key: laneIndex }} -->
-			<div id={`lane-${laneIndex}`} class="flex flex-col shrink-0 w-72" animate:flip>
+			<div
+			style={(laneHoverDrag && laneIndex >= laneHoverDrag)? `transform: translateX(18rem)` : `transform: translateX(0px)`} 
+			draggable={true} 
+			on:dragstart={(event) => {if(!cardHover) {dragLaneStart(event, laneIndex)}}}
+			on:drop={(event) => dropLane(event)}
+			on:dragover|preventDefault={() => false}
+			on:dragenter|preventDefault={() => {laneDragged != null? laneHoverDrag = laneIndex: laneHoverDrag = null }}
+			on:dragend={() => {laneHoverDrag = null}}
+			id={`lane-${laneIndex}`} 
+			class="flex flex-col shrink-0 w-72" 
+			in:receive={{ key: laneIndex }}
+			out:send={{ key: laneIndex }}
+			animate:flip>
 				<!-- COLUMN TITLE -->
 				<div class="flex items-center flex-shrink-0 h-10 px-2">
 					<span class="block text-sm font-semibold">{lane.name}</span>
@@ -118,7 +153,7 @@ import { loop_guard } from 'svelte/internal';
 				<div
 					
 					class="flex flex-col grow pb-2 overflow-auto"
-					on:drop={(event) => drop(event, laneIndex)}
+					on:drop={(event) => {drop(event, laneIndex);event.stopPropagation()}}
 					on:dragover|preventDefault={() => false}
 					on:dragenter|preventDefault={() => (laneHover = laneIndex)}
 					on:dragend={() => {laneHover = null}}
@@ -128,18 +163,18 @@ import { loop_guard } from 'svelte/internal';
 						<div 
 						id={`card-${laneIndex}-${cardIndex}`} 
 						class="card"
-						style={(cardHover !== null && (laneIndex === laneHover && cardIndex >= cardHover))? `transform: translateY(${draggedHeight}px)` : `transform: translateY(0px)`}
+						style={(cardHover !== null && (laneIndex === laneHover && cardIndex >= cardHover))? `transform: translateY(${draggedCardHeight}px)` : `transform: translateY(0px)`}
 						in:receive={{ key: cardIndex }}
 						out:send={{ key: cardIndex }}
 						animate:flip={{ duration: 500 }}>
-						{laneIndex}
+						<!-- {laneIndex}
 						{laneHover}
 						{cardIndex}
-						{cardHover}
+						{cardHover} -->
 							<div
 								class="relative flex flex-col items-start p-4 mt-3 bg-white rounded-lg cursor-pointer bg-opacity-90 group hover:bg-opacity-100"
 								draggable={true}
-								on:dragstart={(event) => dragStart(event, laneIndex, cardIndex)}
+								on:dragstart={(event) => {dragStart(event, laneIndex, cardIndex); event.stopPropagation()}}
 								on:dragover|preventDefault={() => false}
 								on:dragend={() => {cardHover = null}}
 							>
